@@ -1,8 +1,9 @@
+---
+bibliography:FUENTES.md
+---
 # Introducción a DevOps y DevSecOps
 **Fecha:** 01/09/2025
 **Tiempo invertido:** 04:00
-
----
 
 ## Entorno Utilizado
 * **Sistema Operativo:** Windows 11
@@ -56,8 +57,49 @@ Explica cómo una práctica Agile (reuniones diarias, retrospectivas) alimenta d
 Propón un indicador observable (no financiero) para medir mejora de colaboración Dev-Ops (por ejemplo, tiempo desde PR listo hasta despliegue en entorno de pruebas; proporción de rollbacks sin downtime).
 * El MTTR mide el tiempo promedio que tarda el equipo en restaurar el servicio por completo después de que se detecta un incidente en producción, no se puede tener un MTTR bajo si Dev le lanza el problema a Ops. La velocidad de recuperación depende directamente de cuán rápido y eficazmente puedan colaborar para diagnosticar, corregir y desplegar una solución.
 
+# 4.4 Evolución a DevSecOps (seguridad desde el inicio: SAST/DAST; cambio cultural)
+Diferencia SAST (estático, temprano) y DAST (dinámico, en 
+ejecución), y ubícalos en el pipeline.
 
+* Principal diferencial el SAST realiza las pruebas tanto lógicas como de seguridad en un entorno estático, se realiza de manera temprana después del commit y antes de su integración a la rama principal, mientras que el DAST realiza pruebas de seguridad a su vez lógicos, si estos resultan en vulnerabilidades, en tiempo real cunaod el código ya ha sido desplegado y en ejecución.
 
+Define un gate mínimo de seguridad con dos umbrales cuantitativos (por ejemplo, "cualquier hallazgo crítico en componentes expuestos bloquea la promoción"; "cobertura mínima de pruebas de seguridad del X%").
 
+* Cero (0) vulnerabilidades de severidad 'Crítica' o 'Alta' detectadas por el escaneo SAST, la cobertura del escaneo DAST debe ser de al menos el 85% de los endpoint de la API
 
+Incluye una política de excepción con caducidad, responsable y plan de corrección.
 
+* Una excepción puede ser solicitada por el líder técnico, debe ser aprobada por el Director de Seguridad (CISO), tendrá una caducidad de 14 días, y debe incluir un plan de corrección detallado con un ticket asignado en Jira para su seguimiento.
+
+Pregunta retadora: ¿cómo evitar el "teatro de seguridad" (cumplir checklist sin reducir riesgo)? Propón dos señales de eficacia (disminución de hallazgos repetidos; reducción en tiempo de remediación) y cómo medirlas.
+* Se evita enfocándose en métricas basadas en el riesgo y no en el cumplimiento. Por ejemplo, en lugar de un checklist de '100% de escaneos completados', se prioriza la corrección del 'Top 10 de vulnerabilidades' en las aplicaciones críticas.
+    * Se mide comparando los informes de SAST de un trimestre a otro y calculando el porcentaje de vulnerabilidades recurrentes del mismo tipo
+    * Se mide calculando el tiempo promedio desde que una vulnerabilidad es detectada por una herramienta en el pipeline hasta que el commit con la solución es fusionado a la rama principal.
+
+# 4.5 CI/CD y estrategias de despliegue (sandbox, canary, azul/verde)
+![imagenes/pipeline_canary](/imagenes/pipeline_canary.png)
+_En ingeniería de software, la implementación de Canary es la práctica de realizar lanzamientos por etapas. Primero implementamos una actualización de software para una pequeña parte de los usuarios, para que puedan probarla y proporcionar comentarios. Una vez aceptado el cambio, la actualización se extiende al resto de usuarios._
+
+Elige una estrategia para un microservicio crítico (por ejemplo, autenticación) y justifica.
+
+* Una estrategia para un microservicio crítico que puede resultar fatal si logra pasar las pruebsa con un fallo daria muchos problemas,por el ende el Canary Development con el cual se libera a un porcentual pequeño de usuarios se vuelve la mejor opción.
+
+Crea una tabla breve de riesgos vs. mitigaciones (al menos tres filas), por ejemplo:
+
+### Riesgos y Mitigación en el Despliegue de Software
+
+| Riesgo | Mitigación |
+| :--- | :--- |
+| **Falla total de la nueva versión** | Despliegue Canario para limitar el radio de impacto. |
+| **Lentitud inesperada (latencia)** | Monitoreo de latencia p99 con `rollback` automático. |
+| **Sesiones de usuario rotas** | Asegurar compatibilidad de `tokens` y drenado de conexiones. |
+
+Define un KPI primario (p. ej., error 5xx, latencia p95) y un umbral numérico con ventana de observación para promoción/abortado.
+
+* KPI Primario: Tasa de errores de autenticación (respuestas 4xx).
+* Umbral: Abortar el despliegue si la tasa de errores aumenta un 1% sobre la línea base durante una ventana de 5 minutos. 
+
+Pregunta retadora: si el KPI técnico se mantiene, pero cae una métrica de producto (conversión), explica por qué ambos tipos de métricas deben coexistir en el gate.
+
+* Ambos deben coexistir porque un KPI técnico mide la salud de la máquina, mientras que una métrica de producto mide el éxito del negocio. Un sistema técnicamente perfecto que no cumple su objetivo es un fracaso.
+ 
