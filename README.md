@@ -103,3 +103,119 @@ Pregunta retadora: si el KPI técnico se mantiene, pero cae una métrica de prod
 
 * Ambos deben coexistir porque un KPI técnico mide la salud de la máquina, mientras que una métrica de producto mide el éxito del negocio. Un sistema técnicamente perfecto que no cumple su objetivo es un fracaso.
  
+# 4.6 Fundamentos prácticos sin comandos (evidencia mínima)
+## 1.HTTP - contrato observable
+![imagenes/http-evidencia](/imagenes/http-evidencia.png)
+
+|  | Reporte |
+| :--- | :--- |
+| **Método** | GET |
+| **Código de estado** | 200 OK |
+| **Control de Caché** | private, max-age=0|
+| **Server** | gws|
+
+* Rendimiento y Caché: Esta cabecera es crucial para el rendimiento. Le dice al navegador por cuánto tiempo (en segundos, max-age=3600 son 60 minutos) puede guardar una copia local de la página. Durante ese tiempo, si vuelves a visitar el sitio, el navegador cargará la copia local instantáneamente en lugar de volver a pedirla al servidor, haciendo que la carga sea mucho más rápida
+
+* Observabilidad: Esta cabecera revela qué software de servidor web está utilizando el sitio. Es fundamental para la observabilidad y el diagnóstico, ya que permite a los equipos de operaciones saber qué tecnología está entregando el contenido. Si hay un problema, saber el tipo de servidor es uno de los primeros pasos para depurar el error.
+
+## 2.DNS - nombres y TTL
+![imagenes/dns-ttl](/imagenes/dns-ttl.png)
+|  | Reporte |
+| :--- | :--- |
+| **Tipo de registro** | A |
+| **TTL** | 60 |
+
+* Cuando cambias la dirección IP de tu servidor (por ejemplo, durante un despliegue o un rollback de emergencia), el TTL determina cuánto tardará ese cambio en extenderse por internet (proceso conocido como propagación de DNS).
+    * Si el TTL es alto, los servidores DNS de todo el mundo seguirán enviando a los usuarios a la antigua dirección IP hasta por 24 horas, incluso después de que hayas hecho el cambio. Esto crea una larga ventana de inconsistencia, donde algunos usuarios van al nuevo servidor y otros al antiguo. En una emergencia, un TTL alto hace que los rollbacks sean extremadamente lentos y poco efectivos.
+    * Si el TTL es bajo, los servidores DNS están forzados a verificar la dirección IP correcta cada 5 minutos. Esto asegura que cualquier cambio de IP, incluyendo un rollback crítico, se propague rápidamente. Un TTL bajo es esencial para sistemas que requieren alta disponibilidad y capacidad de recuperación rápida.
+
+## TLS - seguridad en tránsito
+![imagenes/tls-cert](/imagenes/tls-cert.png)
+|  | Reporte |
+| :--- | :--- |
+| **CN (Common Name)** | google.com |
+| **Vigencia (Desde/Hasta)** | lunes, 3 de noviembre de 2025, 14:21:10|
+| **Emisora (Issuer)** | Google Trust Services,|
+
+SAN (Subject Alternative Name):
++ Nombre DNS: *.appengine.google.com
++ Nombre DNS: *.bdn.dev
++ Nombre DNS: *.origin-test.bdn.dev 
+
+* ¿Qué sucede si no se valida la cadena?
+Tu navegador no confía directamente en el certificado de un sitio web. Confía en una pequeña lista de Autoridades de Certificación raíz (Root CAs) que vienen preinstaladas en tu sistema operativo.
+
+Si esa cadena se rompe (por un certificado caducado, autofirmado o emitido por una entidad no confiable), ocurren tres cosas:
+
+Errores de Confianza e Impacto en UX: El navegador no puede verificar la identidad del servidor. Como resultado, muestra una advertencia de seguridad a pantalla completa.
+
+Riesgo de Ataque Man-in-the-Middle (MITM): Este es el riesgo de seguridad fundamental. El propósito de TLS es cifrar la comunicación para que nadie en el medio pueda leerla.
+
+## Puertos - estado de runtime
+![imagenes/puertos](/imagenes/puertos.png)
+|  | Reporte |
+| :--- | :--- |
+| **Puerto 445** | Uso compartido de archivos e impresoras |
+| **Puerto 7680** | ase de datos de grafos Neo4j|
+* Cuando despliegas una aplicación que depende de la base de datos Neo4j. Si después del despliegue la aplicación no funciona y al revisar los puertos ves que el puerto 7680 no está en estado LISTENING, tienes la prueba de que una de sus dependencias críticas (la base de datos) no se ha iniciado correctamente.
+
+* Si intentamos iniciar un nuevo servicio que también quiere usar el puerto 445, fallaría con un error de "puerto ocupado". Tu captura de pantalla demuestra por qué: el puerto ya está siendo utilizado por un servicio del sistema operativo. Esto te obliga a configurar tu nueva aplicación en un puerto diferente.
+
+## 12-Factor: Configuración, Puertos y Logs
+
+| Principio | Aplicación Práctica |
+| :--- | :--- |
+| ** Configuración (Puerto)** | El puerto se parametriza leyéndolo de una **variable de entorno** como `process.env.PORT` |
+| **XI. Logs** | Los logs se escriben en el **flujo de salida estándar (`stdout`)**. |
+| **Anti-Patrón** | **Credenciales o claves de API escritas directamente en el código**. |
+
+* Parametrizar el puerto (Configuración Externa):** El código nunca debe tener un puerto "hardcodeado". Al leerlo de una variable de entorno, la misma aplicación puede ejecutarse en cualquier entorno de desarrollo sin cambiar el código, simplemente ajustando la variable que le pasa el sistema operativo o el orquestador de contenedores.
+
+* Logs como Flujo Estándar:** La aplicación no debe preocuparse por archivos de log. Simplemente emite los logs como un flujo de eventos a la salida estándar. Es responsabilidad del entorno de ejecució Docker o Kubernetes de capturar, almacenar y gestionar ese flujo, permitiendo un análisis centralizado y escalable. Escribir en archivos locales es frágil, ya que se pierden si un contenedor se reinicia.
+
+* Impacto del Anti-Patrón en la Reproducibilidad:** Escribir credenciales en el código lo ata a un solo entorno. Esto destruye la reproducibilidad, ya que el código no se puede ejecutar en la máquina de otro desarrollador o en un servidor de producción sin ser modificado. Además, es un riesgo de seguridad catastrófico si el código se sube a un repositorio público.
+
+## Checklist de Diagnóstico: Intermitencia de Servicio
+
+### ### Paso 1: Validar DNS
+| | |
+| :--- | :--- |
+| **Objetivo** | Verificar que el dominio resuelva a la IP correcta consistentemente. |
+| **Evidencia** | Ejecutar `nslookup` varias veces; esperar siempre la misma IP o un conjunto consistente. |
+| **Interpretación** | Si la IP varía o falla, el problema es **DNS inconsistente (b)**. |
+| **Acción Siguiente** | Si falla, revisar proveedor de DNS. Si es exitoso, ir al Paso 2. |
+
+---
+### ### Paso 2: Verificar TLS
+| | |
+| :--- | :--- |
+| **Objetivo** | Asegurar que el certificado de seguridad del servidor sea válido. |
+| **Evidencia** | Inspeccionar el certificado en el navegador; esperar que no esté caducado y el nombre coincida. |
+| **Interpretación** | Si hay advertencia de seguridad, el problema es un **certificado TLS inválido (c)**. |
+| **Acción Siguiente** | Si falla, reemplazar certificado. Si es exitoso, ir al Paso 3. |
+
+---
+### ### Paso 3: Comprobar Puerto
+| | |
+| :--- | :--- |
+| **Objetivo** | Confirmar que el puerto del servicio (ej. 443) está abierto. |
+| **Evidencia** | Usar `telnet` a la IP y puerto; esperar una conexión exitosa. |
+| **Interpretación** | Si la conexión es rechazada, el problema es un **puerto no expuesto (d)**. |
+| **Acción Siguiente** | Si falla, revisar firewall y estado del servicio. Si es exitoso, ir al Paso 4. |
+
+---
+### ### Paso 4: Inspeccionar Estado HTTP
+| | |
+| :--- | :--- |
+| **Objetivo** | Verificar la respuesta inicial del servidor. |
+| **Evidencia** | Usar `curl -I`; esperar un código de estado `200 OK` o `3xx`. |
+| **Interpretación** | Si se recibe un error `5xx`, el problema es un **contrato HTTP roto (a)**. |
+| **Acción Siguiente** | Si falla, revisar logs de la aplicación. Si es exitoso, ir al Paso 5. |
+
+# 4.7 Desafíos de DevOps y mitigaciones
+
+| Riesgo | Descripción | Mitigación Concreta |
+| :--- | :--- | :--- |
+| **Introducción de un Bug Crítico** | Un cambio en el código introduce un error grave que impacta a todos los usuarios, causando una interrupción masiva del servicio. | **Despliegues Graduales (Canary):** Se libera la nueva versión a un porcentaje mínimo de usuarios (ej. 1%) para limitar el **"blast radius"** (radio de impacto) y se monitorea intensivamente. |
+| **Falla de Configuración del Entorno** | Un cambio manual en la configuración del servidor de producción causa que el nuevo despliegue falle de forma inesperada. | **Infraestructura como Código (IaC):** Toda la configuración del entorno se define en código. Los cambios se validan y aplican automáticamente, permitiendo un **rollback** no solo del código, sino de toda la infraestructura. |
+| **Despliegue de Código Inseguro** | Un desarrollador introduce una vulnerabilidad de seguridad que no es detectada y se despliega en producción. | **Revisión Cruzada Obligatoria y Gates de Seguridad:** Se exige que cada cambio sea aprobado por otro miembro del equipo (`Code Review`). Además, se implementan **gates de seguridad automatizados** (SAST/DAST) en el pipeline que bloquean el despliegue si se detectan vulnerabilidades críticas. |
