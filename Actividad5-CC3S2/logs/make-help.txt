@@ -1,0 +1,5 @@
+  all           Construir, testear y empaquetar el proyecto
+  build         Generar out/hello.txt
+  clean         Limpiar archivos generados
+  help          Mostrar esta ayuda
+12:.PHONY: all build test package clean help lint tools check benchmark format dist-clean verify-repro
