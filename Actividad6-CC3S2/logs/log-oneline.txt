@@ -1,0 +1,11 @@
+ef12b80 Commit inicial
+b7be139 cambios
+c86a656 Merge branch 'bugfix/rollback-feature'
+3cadfaa Corregir error en la funcionalidad de rollback
+082d9d2 Revert "Resuelve el conflicto de fusión entre la versión main y feature/advanced-feature"
+d07ca52 Resuelve el conflicto de fusión entre la versión main y feature/advanced-feature
+570d0b2 Agrega la funcion greet como función avanzada
+80cf4c4 Actualizar el mensaje main.py en la rama main
+f3f3f65 Agrega main .py
+8d3f396 Configura la documentación base del repositorio
+40ec000 Commit inicial con README.md

@@ -1,0 +1,6 @@
+[detached HEAD ef12b80] Commit inicial
+ 4 files changed, 23 insertions(+)
+ create mode 100644 add-commit.txt
+ create mode 100644 config.txt
+ create mode 100644 git-version.txt
+ create mode 100644 init-status.txt

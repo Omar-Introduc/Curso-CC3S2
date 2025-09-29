@@ -1,0 +1,7 @@
+user.email=christian.hermoza.t@uni.pe
+user.name=Razzeti
+init.defaultbranch=main
+core.repositoryformatversion=0
+core.filemode=true
+core.bare=false
+core.logallrefupdates=true

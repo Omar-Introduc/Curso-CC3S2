@@ -1,0 +1,7 @@
+* (HEAD detached from c86a656) ef12b80 Commit inicial
+  develop                      f3f3f65 Agrega main .py
+  feature/another-new-feature  f3f3f65 Agrega main .py
+  feature/cherry-pick          9b9c6f6 Corregir error en la funcionalidad de rollback
+  feature/login                f3f3f65 Agrega main .py
+  hotfix/bugfix                40ec000 Commit inicial con README.md
+  main                         3f2f78e Agrega ejemplo de cherry-pick
