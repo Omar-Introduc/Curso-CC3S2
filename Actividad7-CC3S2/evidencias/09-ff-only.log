@@ -1,0 +1,17 @@
+* 9dbeed6 (HEAD -> main) Se corrige un bug en main
+| * b60b992 (feature-ffonly) Commit de funcionalidad
+|/  
+* f9ee846 Commit inicial
+
+
+omar@DESKTOP-2GPELEH:~/Curso-CC3S2/Actividad7-CC3S2$ git merge --ff-only feature-ffonly
+hint: Diverging branches can't be fast-forwarded, you need to either:
+hint:
+hint:   git merge --no-ff
+hint:
+hint: or:
+hint:
+hint:   git rebase
+hint:
+hint: Disable this message with "git config set advice.diverging false"
+fatal: Not possible to fast-forward, aborting.
